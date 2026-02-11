@@ -4,16 +4,23 @@ import http from "http";
 import fetch from "node-fetch";
 import { Server } from "socket.io";
 
-
 const app = express();
-app.use(cors());
+
+// Important for Render proxy support
+app.set("trust proxy", true);
+
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: { origin: "*" },
 });
 
+/* ===========================
+   VIDEO DATA
+=========================== */
 
 const videos = [
   {
@@ -45,60 +52,24 @@ const videos = [
     views: 99000,
     videoUrl:
       "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-  },
-  {
-    _id: "4",
-    videotitle: "Street Food India Tour",
-    thumbnail:
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-    channel: "Food Explorer",
-    views: 87000,
-    videoUrl:
-      "https://media.w3.org/2010/05/video/movie_300.mp4",
-  },
-
-   {
-    _id: "5",
-    videotitle: "Amazing Nature Documentary",
-    thumbnail: "https://i.ytimg.com/vi/6lt2JfJdGSY/maxresdefault.jpg",
-    channel: "Nature Channel",
-    views: 45000,
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-  },
-  {
-    _id: "6",
-    videotitle: "React Full Course for Beginners",
-    thumbnail: "https://i.ytimg.com/vi/bMknfKXIFA8/maxresdefault.jpg",
-    channel: "Code Academy",
-    views: 120000,
-    videoUrl: "https://www.w3schools.com/html/movie.mp4",
-  },
-  {
-    _id: "7",
-    videotitle: "Top Tech Gadgets 2025",
-    thumbnail: "https://i.ytimg.com/vi/GV3HUDMQ-F8/maxresdefault.jpg",
-    channel: "Tech World",
-    views: 78000,
-    videoUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-  },
-  {
-    _id: "8",
-    videotitle: "Street Food Around the World",
-    thumbnail: "https://i.ytimg.com/vi/5qap5aO4i9A/maxresdefault.jpg",
-    channel: "Food Vlogs",
-    views: 99000,
-    videoUrl: "https://media.w3.org/2010/05/sintel/trailer.mp4",
-  },
+  }
 ];
+
+/* ===========================
+   VIDEO ROUTES
+=========================== */
+
+app.get("/", (req, res) => {
+  res.send("🚀 YouTube Backend API Running");
+});
 
 app.get("/video/getall", (req, res) => {
   res.json(videos);
 });
 
-app.get("/", (req, res) => {
-  res.send("🚀 YouTube Backend API is running");
-});
-
+/* ===========================
+   COMMENT SYSTEM
+=========================== */
 
 let comments = [];
 
@@ -109,69 +80,110 @@ const isValidComment = (text) => {
 
 const getCityFromIP = async (ip) => {
   try {
-    const r = await fetch(`https://ipapi.co/${ip}/json/`);
-    const d = await r.json();
-    return d.city || "Unknown";
+    const cleanIP = ip.includes(",") ? ip.split(",")[0] : ip;
+    const response = await fetch(`https://ipapi.co/${cleanIP}/json/`);
+    const data = await response.json();
+    return data.city || "Unknown";
   } catch {
     return "Unknown";
   }
 };
 
+// Add Comment
 app.post("/comment/add", async (req, res) => {
-  const { videoId, text } = req.body;
+  try {
+    const { videoId, text } = req.body;
 
-  if (!isValidComment(text)) {
-    return res.status(400).json({ error: "Invalid characters" });
+    if (!videoId || !text || !isValidComment(text)) {
+      return res.status(400).json({ error: "Invalid comment" });
+    }
+
+    const ip =
+      req.headers["x-forwarded-for"] ||
+      req.socket.remoteAddress ||
+      "8.8.8.8";
+
+    const city = await getCityFromIP(ip);
+
+    const newComment = {
+      id: Date.now(),
+      videoId,
+      text,
+      likes: 0,
+      dislikes: 0,
+      city,
+    };
+
+    comments.push(newComment);
+
+    res.json(newComment);
+
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
   }
-
-  const city = await getCityFromIP(req.ip);
-
-  const newComment = {
-    id: Date.now(),
-    videoId,
-    text,
-    likes: 0,
-    dislikes: 0,
-    city,
-  };
-
-  comments.push(newComment);
-  res.json(newComment);
 });
 
+// Get Comments
 app.get("/comment/:videoId", (req, res) => {
-  res.json(comments.filter((c) => c.videoId === req.params.videoId));
+  const filtered = comments.filter(
+    (c) => c.videoId === req.params.videoId
+  );
+  res.json(filtered);
 });
 
+// Like / Dislike
 app.post("/comment/react", (req, res) => {
   const { commentId, type } = req.body;
-  const comment = comments.find((c) => c.id === commentId);
+
+  const comment = comments.find(
+    (c) => c.id === Number(commentId)
+  );
+
   if (!comment) return res.sendStatus(404);
 
   if (type === "like") comment.likes++;
   if (type === "dislike") comment.dislikes++;
 
+  // Auto remove if 2 dislikes
   if (comment.dislikes >= 2) {
-    comments = comments.filter((c) => c.id !== commentId);
+    comments = comments.filter(
+      (c) => c.id !== comment.id
+    );
     return res.json({ removed: true });
   }
 
   res.json(comment);
 });
 
+/* ===========================
+   TRANSLATE SYSTEM
+=========================== */
+
 app.post("/comment/translate", async (req, res) => {
-  const { text, targetLang } = req.body;
+  try {
+    const { text, targetLang } = req.body;
 
-  const url =
-    "https://translate.googleapis.com/translate_a/single" +
-    `?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    if (!text || !targetLang) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
 
-  const r = await fetch(url);
-  const d = await r.json();
+    const url =
+      "https://translate.googleapis.com/translate_a/single" +
+      `?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
 
-  res.json({ translated: d[0][0][0] });
+    const response = await fetch(url);
+    const data = await response.json();
+
+    res.json({ translated: data[0][0][0] });
+
+  } catch (error) {
+    res.status(500).json({ error: "Translation failed" });
+  }
 });
 
+/* ===========================
+   SOCKET.IO SIGNAL SERVER
+=========================== */
 
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
@@ -185,6 +197,12 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(5000, () => {
-  console.log("✅ Backend running on http://localhost:5000");
+/* ===========================
+   START SERVER
+=========================== */
+
+const PORT = process.env.PORT || 5000;
+
+server.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
