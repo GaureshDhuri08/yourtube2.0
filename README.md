@@ -16,7 +16,7 @@ The project is built using modern frontend and backend technologies to simulate 
 
 Frontend is deployed on Vercel:
 
-👉 https://youtube-project-fmbb.vercel.app/
+👉 https://youtube-project-wsqq.vercel.app/watch/101
 
 ---
 
