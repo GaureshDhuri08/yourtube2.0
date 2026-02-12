@@ -6,7 +6,6 @@ import { Server } from "socket.io";
 
 const app = express();
 
-// Important for Render proxy support
 app.set("trust proxy", true);
 
 app.use(cors({ origin: "*" }));
@@ -18,46 +17,39 @@ const io = new Server(server, {
   cors: { origin: "*" },
 });
 
-/* ===========================
-   VIDEO DATA
-=========================== */
-
 const videos = [
   {
     _id: "1",
-    videotitle: "Wildlife Safari Adventure",
+    videotitle: "Nature Forest Relaxation",
     thumbnail:
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
-    channel: "Discovery World",
-    views: 55000,
+      "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+    channel: "Nature Channel",
+    views: 75000,
     videoUrl:
-      "https://media.w3.org/2010/05/bunny/trailer.mp4",
+      "https://www.w3schools.com/html/mov_bbb.mp4",
   },
   {
     _id: "2",
-    videotitle: "JavaScript Full Course 2026",
+    videotitle: "Learn JavaScript in 30 Minutes",
     thumbnail:
-      "https://images.unsplash.com/photo-1555066931-4365d14bab8c",
-    channel: "Code Master",
-    views: 210000,
+      "https://images.unsplash.com/photo-1517694712202-14dd9538aa97",
+    channel: "Coding Guru",
+    views: 320000,
     videoUrl:
-      "https://media.w3.org/2010/05/sintel/trailer.mp4",
+      "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
   },
   {
     _id: "3",
-    videotitle: "Future Technology & AI",
+    videotitle: "AI Robots Future World",
     thumbnail:
-      "https://images.unsplash.com/photo-1518779578993-ec3579fee39f",
-    channel: "Tech Vision",
-    views: 99000,
+      "https://images.unsplash.com/photo-1485827404703-89b55fcc595e",
+    channel: "Tech Future",
+    views: 180000,
     videoUrl:
-      "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+      "https://media.w3.org/2010/05/sintel/trailer.mp4",
   }
 ];
 
-/* ===========================
-   VIDEO ROUTES
-=========================== */
 
 app.get("/", (req, res) => {
   res.send("🚀 YouTube Backend API Running");
@@ -67,9 +59,7 @@ app.get("/video/getall", (req, res) => {
   res.json(videos);
 });
 
-/* ===========================
-   COMMENT SYSTEM
-=========================== */
+
 
 let comments = [];
 
@@ -89,7 +79,9 @@ const getCityFromIP = async (ip) => {
   }
 };
 
-// Add Comment
+
+
+
 app.post("/comment/add", async (req, res) => {
   try {
     const { videoId, text } = req.body;
@@ -118,12 +110,13 @@ app.post("/comment/add", async (req, res) => {
 
     res.json(newComment);
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Get Comments
+
+
 app.get("/comment/:videoId", (req, res) => {
   const filtered = comments.filter(
     (c) => c.videoId === req.params.videoId
@@ -131,7 +124,8 @@ app.get("/comment/:videoId", (req, res) => {
   res.json(filtered);
 });
 
-// Like / Dislike
+
+
 app.post("/comment/react", (req, res) => {
   const { commentId, type } = req.body;
 
@@ -144,7 +138,6 @@ app.post("/comment/react", (req, res) => {
   if (type === "like") comment.likes++;
   if (type === "dislike") comment.dislikes++;
 
-  // Auto remove if 2 dislikes
   if (comment.dislikes >= 2) {
     comments = comments.filter(
       (c) => c.id !== comment.id
@@ -155,9 +148,8 @@ app.post("/comment/react", (req, res) => {
   res.json(comment);
 });
 
-/* ===========================
-   TRANSLATE SYSTEM
-=========================== */
+
+
 
 app.post("/comment/translate", async (req, res) => {
   try {
@@ -176,14 +168,10 @@ app.post("/comment/translate", async (req, res) => {
 
     res.json({ translated: data[0][0][0] });
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Translation failed" });
   }
 });
-
-/* ===========================
-   SOCKET.IO SIGNAL SERVER
-=========================== */
 
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
@@ -197,9 +185,7 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ===========================
-   START SERVER
-=========================== */
+
 
 const PORT = process.env.PORT || 5000;
 
