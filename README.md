@@ -72,7 +72,7 @@ If backend is not running, videos will not load because APIs are served from the
 * JavaScript
 * HTML5
 * CSS3
-* Tailwind CSS (if used)
+* Tailwind CSS 
 
 ### Backend
 
