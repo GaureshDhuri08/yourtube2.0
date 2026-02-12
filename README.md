@@ -121,7 +121,7 @@ YoutubeProject/
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/snehalbolke13/YoutubeProject.git
+git clone https://github.com/GaureshDhuri08/yourtube2.0/edit/main
 cd YoutubeProject
 ```
 
@@ -222,7 +222,7 @@ This project is licensed under the **MIT License**.
 ## 👩‍💻 Author
 
 **Gauresh Dhuri**
-GitHub: https://github.com/snehalbolke13
+https://github.com/GaureshDhuri08/yourtube2.0
 
 ---
 
