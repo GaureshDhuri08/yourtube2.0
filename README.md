@@ -176,7 +176,7 @@ npm run dev
 The project can be deployed on:
 
 * **Vercel** → Frontend
-* **Render / Railway / Cyclic** → Backend
+* **Render ** → Backend
 
 ---
 
